@@ -8,7 +8,7 @@ using Test
 using OMEinsum
 CUDA.allowscalar(false)
 
-@testset "eigsolve with $atype{$dtype}" for atype in [Array, CuArray], dtype in [Float64]
+@testset "eigsolve with $atype{$dtype}" for atype in atype_list, dtype in [Float64]
     Random.seed!(100)
     D,d = 10,2
     A = atype(rand(D,d,D))
@@ -27,7 +27,7 @@ CUDA.allowscalar(false)
     @test λL ≈ λR
 end
 
-@testset "leftenv and rightenv with $atype{$dtype}" for atype in [Array, CuArray], dtype in [Float64, ComplexF64]
+@testset "leftenv and rightenv with $atype{$dtype}" for atype in atype_list, dtype in [Float64, ComplexF64]
     Random.seed!(100)
     d = 2
     D = 10
@@ -44,7 +44,7 @@ end
     @test λR * FR ≈ ein"((abc,ceh),dgeb),fgh -> adf"(Au,FR,M,Ad)
 end
 
-@testset "normalization leftenv and rightenv with $atype{$dtype}" for atype in [Array, CuArray], dtype in [Float64, ComplexF64]
+@testset "normalization leftenv and rightenv with $atype{$dtype}" for atype in atype_list, dtype in [Float64, ComplexF64]
     Random.seed!(100)
     d = 2
     D = 10
@@ -58,7 +58,7 @@ end
     @test λR * FR ≈ ein"(be,acb), dce -> ad"(FR,Au,Ad)
 end
 
-@testset "bigleftenv and bigrightenv with $atype{$dtype}" for atype in [Array, CuArray], dtype in [Float64, ComplexF64]
+@testset "bigleftenv and bigrightenv with $atype{$dtype}" for atype in atype_list, dtype in [Float64, ComplexF64]
     Random.seed!(100)
     d = 2
     D = 10

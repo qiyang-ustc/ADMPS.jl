@@ -1,4 +1,8 @@
+
 module ADMPS
+
+using Reexport
+@reexport using Random
 
 export Ising, TFIsing, Heisenberg
 export Z,magnetisation, energy

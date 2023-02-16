@@ -1,12 +1,11 @@
 using ADMPS
 using KrylovKit
-using CUDA
 using Test
 using OMEinsum
 using Random
 CUDA.allowscalar(false)
 
-@testset "OMEinsum with $atype{$dtype} " for atype in [Array, CuArray], dtype in [Float64]
+@testset "OMEinsum with $atype{$dtype} " for atype in atype_list, dtype in [Float64]
     Random.seed!(100)
     d = 9
     D = 20
@@ -16,7 +15,7 @@ CUDA.allowscalar(false)
     @time ein"γcη,ηpβ,csap,γsα -> αaβ"(FL,AL,M,conj(AL))
 end
 
-@testset "KrylovKit with $atype{$dtype}" for atype in [Array, CuArray], dtype in [Float64]
+@testset "KrylovKit with $atype{$dtype}" for atype in atype_list, dtype in [Float64]
     Random.seed!(100)
     d = 4
     D = 10

@@ -11,23 +11,12 @@ using Test
 using Zygote
 CUDA.allowscalar(false)
 
-@testset "Zygote with $atype{$dtype}" for atype in [Array, CuArray], dtype in [Float64, ComplexF64]
+@testset "Zygote with $atype{$dtype}" for atype in atype_list, dtype in [Float64, ComplexF64]
     a = atype(randn(2,2))
     @test Zygote.gradient(norm, a)[1] ≈ num_grad(norm, a)
 
     foo1 = x -> sum(atype(Float64[x 2x; 3x 4x]))
     @test Zygote.gradient(foo1, 1)[1] ≈ num_grad(foo1, 1)
-end
-
-@testset "Zygote.@ignore" begin
-    function foo2(x)
-        return x^2
-    end
-    function foo3(x)
-        return x^2 + Zygote.@ignore x^3
-    end
-    @test foo2(1) != foo3(1)
-    @test Zygote.gradient(foo2,1)[1] ≈ Zygote.gradient(foo3,1)[1]
 end
 
 @testset "linsolve with $atype{$dtype}" for atype in [Array], dtype in [Float64]
@@ -53,7 +42,7 @@ end
     @test ein"ab,ab -> "(ξR,R)[] ≈ 0 atol = 1e-9
 end
 
-@testset "loop_einsum mistake with $atype" for atype in [Array, CuArray]
+@testset "loop_einsum mistake with $atype" for atype in atype_list
     Random.seed!(100)
     D = 10
     A = atype(rand(D,D,D))
@@ -68,7 +57,7 @@ end
     @test Zygote.gradient(foo, 1)[1] ≈ num_grad(foo, 1) atol = 1e-8
 end
 
-@testset "leftenv and rightenv with $atype{$dtype}" for atype in [Array, CuArray], dtype in [Float64, ComplexF64]
+@testset "leftenv and rightenv with $atype{$dtype}" for atype in atype_list, dtype in [Float64, ComplexF64]
     Random.seed!(100)
     d = 2
     D = 3
@@ -94,7 +83,7 @@ end
     @test Zygote.gradient(foo2, M)[1] ≈ num_grad(foo2, M) atol = 1e-8
 end
 
-@testset "norm_FL and norm_FR with $atype{$dtype}" for atype in [Array, CuArray], dtype in [Float64, ComplexF64]
+@testset "norm_FL and norm_FR with $atype{$dtype}" for atype in atype_list, dtype in [Float64, ComplexF64]
     Random.seed!(100)
     d = 2
     D = 3

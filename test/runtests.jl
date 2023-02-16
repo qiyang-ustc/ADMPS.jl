@@ -1,5 +1,15 @@
 using ADMPS
 using Test
+using CUDA
+
+CUDA_AVAILABLE = CUDA.functional()
+if CUDA_AVAILABLE
+    atype_list = [Array, CuArray]
+else
+    @info "CUDA GPU not available, Test CPU only."
+    atype_list = [Array, ]
+end
+
 
 @testset "ADMPS.jl" begin
     @testset "cuda_patch.jl" begin
