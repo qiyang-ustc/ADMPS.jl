@@ -15,6 +15,7 @@ include("exampletensors.jl")
 include("exampleobs.jl")
 include("environment.jl")
 include("autodiff.jl")
+include("grassman.jl")
 include("variationalmps.jl")
 
 end

@@ -80,3 +80,28 @@ end
     @test energy(env,model) ≈ eneofβ(model) atol=1e-6
 end
 
+
+@testset "Tri-angular AF-Ising model at 0K" for atype in [Array], dtype in [ComplexF64]
+    seed_number = 100
+    β = 0.8
+    D,χ = 2,20
+    mapsteps = 20
+    infolder, outfolder = "./data/", "./data/"
+    model = "Tri-Ising-Bad-0K"
+
+    # Tri-Ising-bad at 0K
+    M = zeros((2,2,2,2))
+    M[1,2,1,1]=1.0
+    M[2,1,1,1]=1.0
+    M[2,2,1,1]=1.0
+    M[1,2,2,2]=1.0
+    M[2,1,2,2]=1.0
+    M[1,1,2,2]=1.0
+
+    M = atype{dtype}(M)
+    Random.seed!(seed_number)
+
+    Au, Ad = optimisemps(M; infolder = infolder*"$(model)/", outfolder = outfolder*"$(model)/", χ = χ, mapsteps = mapsteps, verbose= true, downfromup = true)
+
+    env = obs_env(M,Au,Ad)
+end

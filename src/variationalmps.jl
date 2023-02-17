@@ -17,23 +17,6 @@ using Zygote
 ````
 """
 function logoverlap(Au, Ad, M)
-    # χ, D,  = size(Au)
-    # Ad /= norm(Ad)
-    # 工dd = ein"acb,dce->adbe"(Ad,conj(Ad))
-    # 工dd_m = reshape(工dd, χ^2,   χ^2  )
-    # nd   = tr(工dd_m*工dd_m)
-    # Ad /= sqrnd
-
-    # 工dd = ein"acb,dce->adbe"(Ad,conj(Ad))
-    # 工dd_m = reshape(工dd, χ^2,   χ^2  )
-    # nd   = tr(工dd_m*工dd_m)
-    # @show nd
-    # 王ud = ein"(acb,dfec),gfh->adgbeh"(Au,M,conj(Ad))
-    # 工ud = ein"acb,dce->adbe"(Au,conj(Ad))
-    # 王ud_m = reshape(王ud, χ^2*D, χ^2*D)
-    # 工ud_m = reshape(工ud, χ^2,   χ^2  )
-
-    # -log(abs2(tr(王ud_m*王ud_m)/tr(工ud_m*工ud_m)))
     _, FLud = leftenv(Au, conj(Ad), M)
     _, FRud = rightenv(Au, conj(Ad), M)
     _, FLd_n = norm_FL(Ad, conj(Ad))
@@ -96,6 +79,7 @@ function init_mps(;infolder = "./data/", atype = Array, D::Int = 2, χ::Int = 5,
     in_chkp_file = infolder*"/D$(D)_chi$(χ)_tol$(tol).jld2"
     if isfile(in_chkp_file)
         mps =  atype(load(in_chkp_file)["mps"])
+        mps = reshape(mps,(χ,D,χ))
         verbose && println("load mps from $in_chkp_file")
     else
         mps = atype(rand(ComplexF64,χ,D,χ))
@@ -105,32 +89,57 @@ function init_mps(;infolder = "./data/", atype = Array, D::Int = 2, χ::Int = 5,
     _, FR_n = norm_FR(mps, conj(mps))
     n = ein"(ad,acb),(dce,be) ->"(FL_n,mps,conj(mps),FR_n)[]/ein"ab,ab ->"(FL_n,FR_n)[]
     mps /= sqrt(n)
+    
+    # Convert to canonical form
+    mps = svd(reshape(mps, (χ*D, χ))) |> x->reshape(atype(x), (χ,D,χ))
+    
     return mps
 end
 
-function onestep(M::AbstractArray; infolder = "./data/", outfolder = "./data/", χ::Int = 5, tol::Real = 1e-10, f_tol::Real = 1e-6, opiter::Int = 100, optimmethod = LBFGS(m = 20), verbose= true, savefile = true)
+function setconvert(χ,D)
+    function tomatrix(Ad)
+        return reshape(Ad,χ*D,χ)
+    end
+
+    function totensor(Ad)
+        return reshape(Ad,χ,D,χ)
+    end
+    return tomatrix,totensor
+end
+
+
+function onestep(M::AbstractArray; infolder = "./data/", outfolder = "./data/", χ::Int = 5, tol::Real = 1e-10, f_tol::Real = 1e-10, opiter::Int = 20, optimmethod = LBFGS(m = 20), verbose= true, savefile = true)
     D = size(M, 1)
     atype = _arraytype(M)
     mps = init_mps(infolder = infolder, atype = atype, D = D, χ = χ, tol = tol, verbose = verbose)
-    
-    Au, Ad = mps, mps
+    tm,tt = setconvert(χ,D)
+    Au, Ad = tm(mps), tm(mps)
+
+    # Temperaroary function to calculate Preconditioner
+    preconditioner(Ad) = MPSPreconditioner(norm_FR(tt(Ad), tt(Ad))[2])
+    function precondprep(p, Ad)
+        p.matrix .= norm_FR(tt(Ad), tt(Ad), p.matrix)[2]
+    end
+
     to = TimerOutput()
-    f(Ad) = @timeit to "forward" logoverlap(Au, Ad, M)
-    ff(Ad) = logoverlap(Au, Ad, M)
-    g(Ad) = @timeit to "backward" Zygote.gradient(ff,Ad)[1]
+    f(Ad) = @timeit to "forward" logoverlap(tt(Au), tt(Ad), M)
+    ff(Ad) = logoverlap(tt(Au), tt(Ad), M)
+    g(Ad) = @timeit to "backward" tm(Zygote.gradient(ff,Ad)[1])
+
     if verbose 
         message = "time  iter   loss           grad_norm\n"
         printstyled(message; bold=true, color=:blue)
         flush(stdout)
     end
     res = optimize(f, g, 
-        Ad, optimmethod,inplace = false,
+        Ad, LBFGS(m=20,P=preconditioner(Ad),precondprep=precondprep,manifold=Grassmann()),inplace = false,
         Optim.Options(f_tol=f_tol, iterations=opiter,
         extended_trace=true,
         callback=os->writelog(os, outfolder, D, χ, tol, savefile, verbose)),
         )
     Ad = Optim.minimizer(res)
-
+    
+    Au,Ad = tt(Au),tt(Ad)
     if verbose 
         message = "compress error   = $(-log(compress_fidelity(Au, Ad, M)))\npower error = $(-log(overlap(Au, Ad))) \n"
         printstyled(message; bold=true, color=:green)
