@@ -5,6 +5,7 @@ using LinearAlgebra: I, norm, tr
 using TimerOutputs
 using OMEinsum: get_size_dict, optimize_greedy,  MinSpaceDiff
 using Zygote
+using HDF5
 
 """
     logoverlap(Au, Ad, M)
@@ -174,6 +175,9 @@ function optimisemps(M::AbstractArray; infolder = "./data/", outfolder = "./data
         end
         direction = "↑"
         Au = onestep(M; infolder = infolder*"$(direction)/", outfolder = outfolder*"$(direction)/", χ = χ, tol = tol, f_tol = f_tol, opiter = opiter, optimmethod = optimmethod, verbose = verbose, savefile = true)
+        
+        h5write("./data/Iter$(i).h5", "Au", Au)
+        
         if updown
             !downfromup && (direction = "↓")
             Ad = onestep(Md; infolder = infolder*"$(direction)/", outfolder = outfolder*"$(direction)/", χ = χ, tol = tol, f_tol = f_tol, opiter = opiter, optimmethod = optimmethod, verbose = verbose, savefile = true)
